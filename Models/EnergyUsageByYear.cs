@@ -4,9 +4,9 @@
     {
         public int Year { get; set; }
 
-        public double UsedEnergy { get; set; }
+        public double? UsedEnergy { get; set; }
 
-        public EnergyUsageByYear(int year, double usedEnergy)
+        public EnergyUsageByYear(int year, double? usedEnergy)
         {
             Year = year;
             UsedEnergy = usedEnergy;

@@ -1,0 +1,53 @@
+﻿@model LvivRegionStatisticsVisualization.Models.EnergyUsage
+
+<div class="text-center">
+    <h1 class="display-4">За видами промисловості</h1>
+</div>
+
+@{
+    ViewData["Title"] = "Використання теплоенергії та електроенергії за видами промисловості";
+    var index = 0;
+
+    foreach (EnergyTypeWithActivities energyType in Model.EnergyTypes)
+    {
+        ActivityType activityType = energyType.Activities.FirstOrDefault(a => a.Name.Contains("Промисловiсть"));
+        if (activityType == null)
+        {
+            continue;
+        }
+        
+        <div class="text-center">
+            <h2>@energyType.Name</h2>
+        </div>
+
+        var yearIndex = 0;
+        foreach(int year in Model.Years)
+        {
+            <div class="text-center">
+                <h3>@year</h3>
+            </div>
+            <canvas id="#@index" style="height: 500px; position: relative; width: 80vw; margin-bottom: 50px"></canvas>
+            <script>
+                var data = @Html.Raw(Json.Serialize(activityType));
+                console.log(data);
+                var myChart = new Chart(document.getElementById('#@index'),
+                    {
+                        type: 'pie',
+                        data: {
+                            labels: data.subtypes.map(t => t.name),
+                            datasets: [
+                                {
+                                    data: data.subtypes.map(a => a.energyUsage[@yearIndex].usedEnergy),
+                                    backgroundColor: ["#0074D9", "#FF4136", "#2ECC40", "#FF851B", "#7FDBFF", "#B10DC9", "#FFDC00", "#001f3f", "#39CCCC", "#01FF70", "#85144b", "#F012BE", "#3D9970", "#111111", "#AAAAAA"]
+                                }]
+                        },
+                        options: {
+                            responsive: true,
+                        }
+                    });
+            </script>
+            yearIndex++;
+            index++;
+        }
+    }
+}

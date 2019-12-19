@@ -1,0 +1,45 @@
+﻿<div class="text-center">
+    <h1 class="display-4">Використання теплоенергії та електроенергії у містах обласного значення і районах</h1>
+</div>
+
+@{
+    ViewData["Title"] = "Використання теплоенергії та електроенергії у містах обласного значення і районах";
+    int index = 0;
+
+    foreach (EnergyTypeWithCities energyType in Model.EnergyTypes)
+    {
+        <div class="text-center" style="margin-top: 50px;">
+            <h2>@energyType.Name</h2>
+        </div>
+
+        foreach (City city in energyType.Cities)
+        {
+            <div class="text-center" style="margin-top: 30px;">
+                <h3>@city.Name</h3>
+            </div>
+            <canvas id="#@index" style="position: relative; height:100vh; width:80vw"></canvas>
+            <script>
+                var data = @Html.Raw(Json.Serialize(city));
+                console.log(data.energyUsage.map(u => u.usedEnergy));
+                var myChart = new Chart(document.getElementById('#@index'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: @Html.Raw(Json.Serialize(Model.Years)),
+                            datasets: [
+                                {
+                                    label: data.name,
+                                    data: data.energyUsage.map(u => u.usedEnergy),
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true
+                        }
+                    });
+            </script>
+            index++;
+        }
+    }
+}

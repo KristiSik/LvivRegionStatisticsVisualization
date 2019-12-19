@@ -20,22 +20,12 @@
                             {
                                 label: data.name,
                                 data: data.activities[0].energyUsage.map(u => u.usedEnergy),
-                                borderWidth: 1
+                                borderWidth: 1,
                             }
                         ]
                     },
                     options: {
                         responsive: true,
-                        scales:
-                        {
-                            yAxes: [
-                                {
-                                    ticks: {
-                                        beginAtZero: true
-                                    }
-                                }
-                            ]
-                        }
                     }
                 });
         </script>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using LvivRegionStatisticsVisualization.Enums;
 using LvivRegionStatisticsVisualization.Extensions;
 using LvivRegionStatisticsVisualization.Models;
 
@@ -20,24 +21,42 @@ namespace LvivRegionStatisticsVisualization.Services
             "Електроенергія"
         };
 
-        public EnergyUsage ParseCsvData(string inputString)
+        public EnergyUsage ParseCsvData(string inputString, CsvDataType csvDataType)
         {
             List<List<string>> parsedRowValues = ParseRows(inputString);
-            if (!TryParseYears(parsedRowValues, out var years, out var indexOfYearsRow) || 
-                !TryParseTerritoryName(parsedRowValues, out var territoryName) ||
-                !TryParseEnergyTypes(parsedRowValues.Skip(indexOfYearsRow + 1).ToList(), years, out var energyTypes))
+            switch (csvDataType)
             {
-                return null;
+                case CsvDataType.ByActivityType:
+                    if (!TryParseYears(parsedRowValues, out var years1, out var indexOfYearsRow1) ||
+                        !TryParseTerritoryName(parsedRowValues, out var territoryName) ||
+                        !TryParseEnergyTypesWithActivities(parsedRowValues.Skip(indexOfYearsRow1 + 1).ToList(), years1, out var energyTypes1))
+                    {
+                        return null;
+                    }
+
+                    return new EnergyUsage()
+                    {
+                        TerritoryName = territoryName,
+                        EnergyTypes = energyTypes1,
+                        Years = years1
+                    };
+
+                case CsvDataType.ByCity:
+                    if (!TryParseYears(parsedRowValues, out var years2, out var indexOfYearsRow2) ||
+                        !TryParseEnergyTypesWithCities(parsedRowValues.Skip(indexOfYearsRow2 + 1).ToList(), years2, out var energyTypes2))
+                    {
+                        return null;
+                    }
+
+                    return new EnergyUsage
+                    {
+                        EnergyTypes = energyTypes2,
+                        Years = years2
+                    };
+
+                default:
+                    return null;
             }
-
-            EnergyUsage result = new EnergyUsage
-            {
-                TerritoryName = territoryName,
-                EnergyTypes = energyTypes,
-                Years = years
-            };
-
-            return result;
         }
 
         private List<List<string>> ParseRows(string inputString)
@@ -146,16 +165,16 @@ namespace LvivRegionStatisticsVisualization.Services
             return false;
         }
 
-        private bool TryParseEnergyTypes(List<List<string>> rows, List<int> years, out List<EnergyType> energyTypes)
+        private bool TryParseEnergyTypesWithActivities(List<List<string>> rows, List<int> years, out List<EnergyType> energyTypes)
         {
             var result = new List<EnergyType>();
-            EnergyType currentEnergyType = default;
+            EnergyTypeWithActivities currentEnergyType = default;
             for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
             {
                 var rowValues = rows[rowIndex];
                 if (rowValues.Count == 1 && _energyTypes.Any(t => rowValues.First().Contains(t)))
                 {
-                    currentEnergyType = new EnergyType
+                    currentEnergyType = new EnergyTypeWithActivities()
                     {
                         Name = rowValues[0]
                     };
@@ -177,7 +196,7 @@ namespace LvivRegionStatisticsVisualization.Services
                     var localRowValues = rowValues;
                     while (!localRowValues.First()[0].IsCapital())
                     {
-                        if (TryParseActivityType(rowValues, years, out var subActivityType))
+                        if (TryParseActivityType(localRowValues, years, out var subActivityType))
                         {
                             if (currentEnergyType != null)
                             {
@@ -203,11 +222,45 @@ namespace LvivRegionStatisticsVisualization.Services
             return true;
         }
 
+        private bool TryParseEnergyTypesWithCities(List<List<string>> rows, List<int> years, out List<EnergyType> energyTypes)
+        {
+            var result = new List<EnergyType>();
+            EnergyTypeWithCities currentEnergyType = default;
+            for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
+            {
+                var rowValues = rows[rowIndex];
+                if (rowValues.Count == 1 && _energyTypes.Any(t => rowValues.First().Contains(t)))
+                {
+                    currentEnergyType = new EnergyTypeWithCities()
+                    {
+                        Name = rowValues[0]
+                    };
+                    result.Add(currentEnergyType);
+                }
+                else if (TryParseCity(rowValues, years, out var city))
+                {
+                    // If first character is capital, then this is activity name
+                    if (currentEnergyType != null)
+                    {
+                        if (currentEnergyType.Cities == null)
+                        {
+                            currentEnergyType.Cities = new List<City>();
+                        }
+                        currentEnergyType.Cities.Add(city);
+                    }
+                }
+            }
+
+            energyTypes = result;
+            return true;
+        }
+
         private bool TryParseActivityType(List<string> rowValues, List<int> years, out ActivityType activityType)
         {
             var result = new ActivityType
             {
-                Name = rowValues.First()
+                Name = rowValues.First(),
+                EnergyUsage = new List<EnergyUsageByYear>()
             };
 
             int index = 0;
@@ -215,24 +268,56 @@ namespace LvivRegionStatisticsVisualization.Services
             {
                 if (double.TryParse(rowValue, out var usage))
                 {
-                    if (result.EnergyUsage == null)
-                    {
-                        result.EnergyUsage = new List<EnergyUsageByYear>();
-                    }
-
                     result.EnergyUsage.Add(new EnergyUsageByYear(years[index], usage));
+                }
+                else
+                {
+                    result.EnergyUsage.Add(new EnergyUsageByYear(years[index], null));
                 }
 
                 index++;
             }
 
-            if (result.EnergyUsage == null)
+            if (result.EnergyUsage.Count == 0)
             {
                 activityType = null;
                 return false;
             }
 
             activityType = result;
+            return true;
+        }
+
+        private bool TryParseCity(List<string> rowValues, List<int> years, out City city)
+        {
+            var result = new City
+            {
+                Name = rowValues.First(),
+                EnergyUsage = new List<EnergyUsageByYear>()
+            };
+
+            int index = 0;
+            foreach (var rowValue in rowValues.Skip(1))
+            {
+                if (double.TryParse(rowValue, out var usage))
+                {
+                    result.EnergyUsage.Add(new EnergyUsageByYear(years[index], usage));
+                }
+                else
+                {
+                    result.EnergyUsage.Add(new EnergyUsageByYear(years[index], null));
+                }
+
+                index++;
+            }
+
+            if (result.EnergyUsage.Count == 0)
+            {
+                city = null;
+                return false;
+            }
+
+            city = result;
             return true;
         }
     }

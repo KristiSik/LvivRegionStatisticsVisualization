@@ -1,6 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
 using LvivRegionStatisticsVisualization.Models;
 using LvivRegionStatisticsVisualization.Services;
 
@@ -8,38 +8,65 @@ namespace LvivRegionStatisticsVisualization.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private const int FetchDataFrequencyMinutes = 10;
         private readonly IStatisticsDataService _statisticsDataService;
+        private DateTime _responseTime;
+        private EnergyUsage _energyUsageByActivityType;
+        private EnergyUsage _energyUsageByCity;
 
-        public HomeController(ILogger<HomeController> logger, IStatisticsDataService statisticsDataService)
+        public HomeController(IStatisticsDataService statisticsDataService)
         {
-            _logger = logger;
             _statisticsDataService = statisticsDataService;
+            FetchData();
         }
 
         public IActionResult Index()
         {
-            EnergyUsage energyUsage = _statisticsDataService.GetActualStatisticsData().Result;
-            ViewData["EnergyUsage"] = energyUsage;
-            return View(energyUsage);
+            if ((DateTime.Now - _responseTime).TotalMinutes >= FetchDataFrequencyMinutes)
+            {
+                FetchData();
+            }
+            return View(_energyUsageByActivityType);
         }
 
-        public IActionResult StatisticsByYear()
+        public IActionResult StatisticsByActivity()
         {
-            EnergyUsage energyUsage = _statisticsDataService.GetActualStatisticsData().Result;
-            ViewData["EnergyUsage"] = energyUsage;
-            return View(energyUsage);
+            if ((DateTime.Now - _responseTime).TotalMinutes >= FetchDataFrequencyMinutes)
+            {
+                FetchData();
+            }
+            return View(_energyUsageByActivityType);
         }
 
-        public IActionResult Privacy()
+        public IActionResult StatisticsByProductActivity()
         {
-            return View();
+            if ((DateTime.Now - _responseTime).TotalMinutes >= FetchDataFrequencyMinutes)
+            {
+                FetchData();
+            }
+            return View(_energyUsageByActivityType);
+        }
+
+        public IActionResult StatisticsByCity()
+        {
+            if ((DateTime.Now - _responseTime).TotalMinutes >= FetchDataFrequencyMinutes)
+            {
+                FetchData();
+            }
+            return View(_energyUsageByCity);
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        private void FetchData()
+        {
+            _energyUsageByActivityType = _statisticsDataService.GetActualStatisticsByActivityTypeData().Result;
+            _energyUsageByCity = _statisticsDataService.GetActualStatisticsByCityData().Result;
+            _responseTime = DateTime.Now;
         }
     }
 }

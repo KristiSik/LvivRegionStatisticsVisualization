@@ -2,8 +2,10 @@
 
 namespace LvivRegionStatisticsVisualization.Models
 {
-    public abstract class EnergyType
+    public class City
     {
         public string Name { get; set; }
+
+        public List<EnergyUsageByYear> EnergyUsage { get; set; }
     }
 }
