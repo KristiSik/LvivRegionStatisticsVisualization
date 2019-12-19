@@ -1,13 +1,14 @@
 ﻿<div class="text-center">
-    <h1 class="display-4">Сумарне використання теплоенергії та електроенергії</h1>
+    <h1 class="display-4">За видами економічної діяльності</h1>
 </div>
 
 @{
-    ViewData["Title"] = "Статистика сумарного використання теплоенергії та електроенергії";
+    ViewData["Title"] = "Використання теплоенергії та електроенергії за видами економічної діяльності";
     int index = 0;
+
     foreach (EnergyType energyType in Model.EnergyTypes)
     {
-        <canvas id="#@index" style="position: relative; height:40vh; width:80vw"></canvas>
+        <canvas id="#@index" style="position: relative; height:100vh; width:80vw"></canvas>
         <script>
             var data = @Html.Raw(Json.Serialize(energyType));
             console.log(data);
@@ -16,17 +17,17 @@
                     type: 'line',
                     data: {
                         labels: @Html.Raw(Json.Serialize(Model.Years)),
-                        datasets: [
-                            {
-                                label: data.name,
-                                data: data.activities[0].energyUsage.map(u => u.usedEnergy),
+                        datasets: data.activities.slice(1, -1).map(a => {
+                            return {
+                                label: a.name,
+                                data: a.energyUsage.map(u => u.usedEnergy),
                                 borderWidth: 1
                             }
-                        ]
+                        })
                     },
                     options: {
                         responsive: true,
-                        scales:
+                            scales:
                         {
                             yAxes: [
                                 {

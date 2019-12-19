@@ -15,12 +15,20 @@ namespace LvivRegionStatisticsVisualization.Controllers
         {
             _logger = logger;
             _statisticsDataService = statisticsDataService;
-            statisticsDataService.GetActualStatisticsData();
         }
 
         public IActionResult Index()
         {
-            return View();
+            EnergyUsage energyUsage = _statisticsDataService.GetActualStatisticsData().Result;
+            ViewData["EnergyUsage"] = energyUsage;
+            return View(energyUsage);
+        }
+
+        public IActionResult StatisticsByYear()
+        {
+            EnergyUsage energyUsage = _statisticsDataService.GetActualStatisticsData().Result;
+            ViewData["EnergyUsage"] = energyUsage;
+            return View(energyUsage);
         }
 
         public IActionResult Privacy()
